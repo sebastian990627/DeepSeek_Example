@@ -1,68 +1,61 @@
 ﻿@page "/counter"
-@using Microsoft.Extensions.AI
 @rendermode InteractiveServer
-
 
 <div class="card">
     <div class="card-header">
         Prawie jak czatGBT
     </div>
     <div class="card-body ">
-        @foreach (var item in Messages)
+        @foreach (var item in Messages.Where(n=>n.Role==ChatRole.User||n.Role==ChatRole.Assistant))
         {
-            <div class="d-flex  @(item.IsMy?"justify-content-start":"justify-content-end")">
-                <div class="alert chat-message @(item.IsMy?"alert-primary":"alert-info") m-2 p-1" style="flex: 0 1 500px; opacity: 1; transition: all 1s;">
-                    @((MarkupString)item.Message)
+            <div class="d-flex @item.CSSJustifyClass()">
+                <div class="alert chat-message @item.CSSColorClass() m-2 p-1" style="flex: 0 1 500px; opacity: 1; transition: all 1s;">
+                    @((MarkupString)item.Text)
                 </div>
             </div>
         }
         <div class="d-flex gap-2">
-
             <input type="text" class="form-control" @oninput="HandleInput" @bind="Message" style="flex:1 1 200px" @onkeydown="HandleKeyDown" />
             <button class="btn btn-primary" @onclick="SendMessage">Skończylem</button>
         </div>
     </div>
 </div>
 
-
 @code {
-    public List<Massage> Messages { get; set; } = [];
+    public List<ChatMessage> Messages { get; set; } = [new(ChatRole.System, "Odpowiadaj na moje pytanie tylko i wyłącnie w języku polskim")];
     [Inject] private IChatClient ChatClient { get; set; } = default!;
     public string Message { get; set; } = string.Empty;
+    private SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
     private async Task SendMessage()
     {
-        if (!string.IsNullOrWhiteSpace(Message))
+        await semaphore.WaitAsync();
+        try
         {
-            Messages.Add(new Massage { Message = Message, IsMy = true });
-            var myMessage = new Massage { Message = "", IsMy = false };
-            var localMassage = Message;
-            Message = string.Empty;
-            Messages.Add(myMessage);
-            await foreach (var item in ChatClient.CompleteStreamingAsync(localMassage))
+            if (!string.IsNullOrWhiteSpace(Message))
             {
-                myMessage.Message += item.Text;
-                await InvokeAsync(StateHasChanged);
+                var myMessege = new ChatMessage { Text = Message, Role = ChatRole.User };
+                var responeMessage = new ChatMessage { Text = "", Role = ChatRole.Assistant };
+                Message = string.Empty;
+                Messages.AddRange([myMessege, responeMessage]);
+                await foreach (var item in ChatClient.CompleteStreamingAsync(Message))
+                {
+                    responeMessage.Text += item.Text;
+                    await InvokeAsync(StateHasChanged);
+                }
             }
+        }
+        finally
+        {
+            semaphore.Release();
         }
     }
     public void HandleInput(ChangeEventArgs e)
     {
         Message = e.Value?.ToString() ?? "";
     }
-
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
-        {
-            await SendMessage();
-        }
-    }
-
-    public class Massage
-    {
-        public string Message { get; set; } = string.Empty;
-
-        public bool IsMy { get; set; }
+        if (e.Key == "Enter") await SendMessage();
     }
 }
