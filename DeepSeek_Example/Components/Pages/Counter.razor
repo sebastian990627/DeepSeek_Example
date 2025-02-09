@@ -6,11 +6,11 @@
         Prawie jak czatGBT
     </div>
     <div class="card-body ">
-        @foreach (var item in Messages.Where(n=>n.Role==ChatRole.User||n.Role==ChatRole.Assistant))
+        @foreach (var item in Messages.Where(n => n.messege.Role == ChatRole.User || n.messege.Role == ChatRole.Assistant))
         {
-            <div class="d-flex @item.CSSJustifyClass()">
-                <div class="alert chat-message @item.CSSColorClass() m-2 p-1" style="flex: 0 1 500px; opacity: 1; transition: all 1s;">
-                    @((MarkupString)item.Text)
+            <div class="d-flex @item.classJustify">
+                <div class="alert chat-message @item.classAlert m-2 p-1" style="flex: 0 1 500px; opacity: 1; transition: all 1s;">
+                    @((MarkupString)item.messege.Text)
                 </div>
             </div>
         }
@@ -22,7 +22,7 @@
 </div>
 
 @code {
-    public List<ChatMessage> Messages { get; set; } = [new(ChatRole.System, "Odpowiadaj na moje pytanie tylko i wyłącnie w języku polskim")];
+    public List<(ChatMessage messege, string classJustify, string classAlert)> Messages { get; set; } = [(new(ChatRole.System, "Odpowiadaj na moje pytanie tylko i wyłącnie w języku polskim"), "justify-content-end", "alert-info")];
     [Inject] private IChatClient ChatClient { get; set; } = default!;
     public string Message { get; set; } = string.Empty;
     private SemaphoreSlim semaphore = new SemaphoreSlim(1);
@@ -34,13 +34,13 @@
         {
             if (!string.IsNullOrWhiteSpace(Message))
             {
-                var myMessege = new ChatMessage { Text = Message, Role = ChatRole.User };
-                var responeMessage = new ChatMessage { Text = "", Role = ChatRole.Assistant };
+                var myMessege = GetMessageAndClass(new ChatMessage { Text = Message, Role = ChatRole.User });
+                var responeMessage = GetMessageAndClass(new ChatMessage { Text = "", Role = ChatRole.Assistant });
                 Message = string.Empty;
                 Messages.AddRange([myMessege, responeMessage]);
                 await foreach (var item in ChatClient.CompleteStreamingAsync(Message))
                 {
-                    responeMessage.Text += item.Text;
+                    responeMessage.messege.Text += item.Text;
                     await InvokeAsync(StateHasChanged);
                 }
             }
@@ -57,5 +57,9 @@
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await SendMessage();
+    }
+    private static (ChatMessage messege, string classJustify, string classAlert) GetMessageAndClass(ChatMessage message)
+    {
+        return (message, message.Role == ChatRole.User ? "justify-content-start" : "justify-content-end", message.Role == ChatRole.User ? "alert-primary" : "alert-info");
     }
 }

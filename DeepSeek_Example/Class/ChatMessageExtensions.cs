@@ -13,4 +13,9 @@ namespace DeepSeek_Example.Class
             return message.Role == ChatRole.User ? "alert-primary" : "alert-info";
         }
     }
+    public partial class ChatMessageAndClass:ChatMessage
+    {
+        public string JustifyClass { get; set; }
+        public string Message { get; set; }
+    }
 }
