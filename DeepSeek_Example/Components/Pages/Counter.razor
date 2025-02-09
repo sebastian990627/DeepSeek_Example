@@ -5,18 +5,18 @@
     <div class="card-header">
         Prawie jak czatGBT
     </div>
-    <chat-container class="card-body">
+    <chat-container>
         <chat-messages-container id="messegesContainer" class="border-bottom border-2">
             @foreach (var item in Messages.Where(n => n.messege.Role == ChatRole.User || n.messege.Role == ChatRole.Assistant))
             {
                 <div class="d-flex @item.classJustify">
                     <chat-message class="alert @item.classAlert m-2 p-1">
-                        @((MarkupString)item.messege.Text)
+                        @((MarkupString)(!string.IsNullOrEmpty(item.messege.Text) ? item.messege.Text : "<chat-pulse-text>Trwa generowanie...</chat-pulse-text>"))
                     </chat-message>
                 </div>
             }
         </chat-messages-container>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 m-2">
             <input type="text" class="form-control" @oninput="HandleInput" @onkeydown="HandleKeyDown" @bind="Message" style="flex:1 1 200px" />
             <button class="btn btn-primary" @onclick="SendMessage">Skończylem</button>
         </div>
@@ -37,8 +37,8 @@
         {
             if (!string.IsNullOrWhiteSpace(Message))
             {
-                var myMessege = GetMessageAndClass(new ChatMessage { Text = Message, Role = ChatRole.User });
-                var responeMessage = GetMessageAndClass(new ChatMessage { Text = "", Role = ChatRole.Assistant });
+                var myMessege = GetMessageAndClass(new(ChatRole.User, Message));
+                var responeMessage = GetMessageAndClass(new(ChatRole.Assistant, ""));
                 Message = string.Empty;
                 Messages.AddRange([myMessege, responeMessage]);
                 await foreach (var item in ChatClient.CompleteStreamingAsync(Messages.Select(n => n.messege).ToList()))
