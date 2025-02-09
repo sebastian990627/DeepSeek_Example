@@ -5,27 +5,30 @@
     <div class="card-header">
         Prawie jak czatGBT
     </div>
-    <div class="card-body ">
-        @foreach (var item in Messages.Where(n => n.messege.Role == ChatRole.User || n.messege.Role == ChatRole.Assistant))
-        {
-            <div class="d-flex @item.classJustify">
-                <div class="alert chat-message @item.classAlert m-2 p-1" style="flex: 0 1 500px; opacity: 1; transition: all 1s;">
-                    @((MarkupString)item.messege.Text)
+    <chat-container class="card-body">
+        <chat-messages-container id="messegesContainer" class="border-bottom border-2">
+            @foreach (var item in Messages.Where(n => n.messege.Role == ChatRole.User || n.messege.Role == ChatRole.Assistant))
+            {
+                <div class="d-flex @item.classJustify">
+                    <chat-message class="alert @item.classAlert m-2 p-1">
+                        @((MarkupString)item.messege.Text)
+                    </chat-message>
                 </div>
-            </div>
-        }
+            }
+        </chat-messages-container>
         <div class="d-flex gap-2">
-            <input type="text" class="form-control" @oninput="HandleInput" @bind="Message" style="flex:1 1 200px" @onkeydown="HandleKeyDown" />
+            <input type="text" class="form-control" @oninput="HandleInput" @onkeydown="HandleKeyDown" @bind="Message" style="flex:1 1 200px" />
             <button class="btn btn-primary" @onclick="SendMessage">Skończylem</button>
         </div>
-    </div>
+    </chat-container>
 </div>
 
 @code {
-    public List<(ChatMessage messege, string classJustify, string classAlert)> Messages { get; set; } = [(new(ChatRole.System, "Odpowiadaj na moje pytanie tylko i wyłącnie w języku polskim"), "justify-content-end", "alert-info")];
-    [Inject] private IChatClient ChatClient { get; set; } = default!;
-    public string Message { get; set; } = string.Empty;
-    private SemaphoreSlim semaphore = new SemaphoreSlim(1);
+    List<(ChatMessage messege, string classJustify, string classAlert)> Messages { get; set; } = [GetMessageAndClass(new(ChatRole.System, "Odpowiadaj na moje pytanie tylko i wyłącnie w języku polskim"))];
+    [Inject] IChatClient ChatClient { get; set; } = default!;
+    [Inject] IJSRuntime JSRuntime { get; set; } = default!;
+    string Message { get; set; } = string.Empty;
+    SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
     private async Task SendMessage()
     {
@@ -38,11 +41,12 @@
                 var responeMessage = GetMessageAndClass(new ChatMessage { Text = "", Role = ChatRole.Assistant });
                 Message = string.Empty;
                 Messages.AddRange([myMessege, responeMessage]);
-                await foreach (var item in ChatClient.CompleteStreamingAsync(Message))
+                await foreach (var item in ChatClient.CompleteStreamingAsync(Messages.Select(n => n.messege).ToList()))
                 {
                     responeMessage.messege.Text += item.Text;
                     await InvokeAsync(StateHasChanged);
                 }
+                await JSRuntime.InvokeVoidAsync("scrollToBottom", "messegesContainer");
             }
         }
         finally
@@ -60,6 +64,6 @@
     }
     private static (ChatMessage messege, string classJustify, string classAlert) GetMessageAndClass(ChatMessage message)
     {
-        return (message, message.Role == ChatRole.User ? "justify-content-start" : "justify-content-end", message.Role == ChatRole.User ? "alert-primary" : "alert-info");
+        return (message, message.Role == ChatRole.User ? "justify-content-end" : "justify-content-start", message.Role == ChatRole.User ? "alert-info" : "alert-primary");
     }
 }

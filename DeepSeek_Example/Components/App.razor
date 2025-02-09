@@ -18,6 +18,17 @@
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        function scrollToBottom(elementId) {
+            var container = document.getElementById(elementId);
+            if (container) {
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    </script>
 </body>
 
 </html>

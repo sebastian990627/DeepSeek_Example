@@ -13,7 +13,7 @@ a, .btn-link {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .content {
@@ -69,8 +69,17 @@ h1:focus {
     }
 }
 
-.chat-message {
-    /* Czas animacji: 1s, timing function: ease-in, 
-     fill-mode: forwards (pozostanie w stanie koñcowym) */
+chat-message {
+    flex: 0 1 500px;
+    opacity: 1;
+    transition: all 1s;
     animation: fadeIn 0.5s ease-in forwards;
+}
+
+chat-messages-container {
+    display: block;
+    height: 70vh;
+    overflow: auto;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
 }

@@ -22,8 +22,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-var chatClient = app.Services
-    .GetRequiredService<IChatClient>();
 
 app.UseAntiforgery();
 
