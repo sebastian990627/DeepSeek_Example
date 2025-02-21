@@ -49,11 +49,12 @@
     <button @onclick="DrawRectangle">Dodaj prostokąt</button>
     <button @onclick="DrawCircle">Dodaj okrąg</button>
     <button @onclick="DrawLine">Dodaj linię</button>
+    <button @onclick="DrawArrow">Dodaj strzałkę</button>
 </div>
 
 @code {
     [Parameter]
-    public string ImagePath { get; set; } = "Zrzut ekranu 2025-02-21 212810.png"; // Upewnij się, że obraz znajduje się w wwwroot/images
+    public string ImagePath { get; set; } = "Zrzut ekranu 2025-02-05 203728.png"; // Upewnij się, że obraz znajduje się w wwwroot/images
 
     private string UserText { get; set; } = "Przykładowy tekst";
     private string LineColor { get; set; } = "#000000";
@@ -92,6 +93,11 @@
     private async Task DrawLine()
     {
         await JS.InvokeVoidAsync("fabricEditor.drawLine");
+    }
+
+    private async Task DrawArrow()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.drawArrow");
     }
 
     private async Task CropImage()

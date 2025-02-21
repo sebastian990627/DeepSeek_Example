@@ -122,14 +122,18 @@ window.fabricEditor = {
         this.currentStrokeWidth = parseInt(width, 10);
     },
 
-    // Dodawanie własnego tekstu – tekst ma kolor wybrany w ustawieniach
+    // Dodawanie własnego tekstu – teraz dodajemy tekst na środku widocznego obszaru canvasu
     addCustomText: function (text) {
         if (this.canvas) {
+            const centerX = this.canvas.getWidth() / 2;
+            const centerY = this.canvas.getHeight() / 2;
             const textObj = new fabric.Textbox(text, {
-                left: 50,
-                top: 50,
+                left: centerX,
+                top: centerY,
                 fill: this.currentShapeColor,
-                fontSize: 20
+                fontSize: 20,
+                originX: 'center',
+                originY: 'center'
             });
             this.canvas.add(textObj);
         }
@@ -174,6 +178,39 @@ window.fabricEditor = {
                 strokeWidth: this.currentStrokeWidth
             });
             this.canvas.add(line);
+        }
+    },
+
+    // Dodawanie strzałki – linia oraz trójkątny nagłówek; całość jako grupa
+    drawArrow: function () {
+        if (this.canvas) {
+            // Przykładowe współrzędne – można je modyfikować lub rozszerzyć o interakcję
+            const x1 = 50, y1 = 50, x2 = 200, y2 = 200;
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const headlen = 15;
+            const arrowHeadPoints = [
+                { x: x2, y: y2 },
+                { x: x2 - headlen * Math.cos(angle - Math.PI / 6), y: y2 - headlen * Math.sin(angle - Math.PI / 6) },
+                { x: x2 - headlen * Math.cos(angle + Math.PI / 6), y: y2 - headlen * Math.sin(angle + Math.PI / 6) }
+            ];
+            // Linia strzałki
+            const line = new fabric.Line([x1, y1, x2, y2], {
+                stroke: this.currentShapeColor,
+                strokeWidth: this.currentStrokeWidth,
+                originX: 'center',
+                originY: 'center'
+            });
+            // Nagłówek strzałki
+            const arrowHead = new fabric.Polygon(arrowHeadPoints, {
+                fill: this.currentShapeColor,
+                stroke: this.currentShapeColor,
+                strokeWidth: this.currentStrokeWidth,
+                originX: 'center',
+                originY: 'center'
+            });
+            // Grupujemy linię i nagłówek
+            const arrowGroup = new fabric.Group([line, arrowHead], { left: 50, top: 50 });
+            this.canvas.add(arrowGroup);
         }
     },
 
@@ -284,4 +321,3 @@ window.fabricEditor = {
         }
     }
 };
-
