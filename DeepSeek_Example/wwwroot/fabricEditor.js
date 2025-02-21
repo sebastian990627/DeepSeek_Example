@@ -71,22 +71,33 @@ window.fabricEditor = {
     canvas: null,
     isCropping: false,
 
-    // Inicjalizacja fabric.js – ustawiamy canvas na rozmiary obrazu
+    // Inicjalizacja fabric.js – obraz zostaje wczytany i skalowany do rozmiaru kontenera
     initialize: function (canvasId, imagePath) {
         this.canvas = new fabric.Canvas(canvasId);
         this.canvas.isDrawingMode = false;
         this.canvas.backgroundColor = 'white';
 
-        // Ładowanie obrazu jako tła i ustawianie rozmiarów canvasu na rozmiary obrazu
         fabric.Image.fromURL(imagePath, (img) => {
-            this.canvas.setWidth(img.width);
-            this.canvas.setHeight(img.height);
+            // Pobierz kontener dla canvasu
+            const container = document.getElementById("canvasContainer");
+            let scaleFactor = 1;
+            if (container) {
+                const containerWidth = container.clientWidth;
+                scaleFactor = containerWidth / img.width;
+            }
+            const newWidth = img.width * scaleFactor;
+            const newHeight = img.height * scaleFactor;
+            // Ustaw nowe wymiary canvasu
+            this.canvas.setWidth(newWidth);
+            this.canvas.setHeight(newHeight);
+            // Skaluj obraz i ustaw jako tło (nieedytowalny)
+            img.scale(scaleFactor);
             img.set({ selectable: false });
             this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
         });
     },
 
-    // Włączenie trybu rysowania
+    // Tryb rysowania – włącza możliwość rysowania pędzlem
     enableDrawingMode: function () {
         if (this.canvas) {
             this.canvas.isDrawingMode = true;
@@ -100,7 +111,7 @@ window.fabricEditor = {
         }
     },
 
-    // Ustawienia pędzla (kolor i grubość) dla trybu rysowania
+    // Ustawienia pędzla: kolor i grubość linii
     setDrawingOptions: function (color, width) {
         if (this.canvas && this.canvas.freeDrawingBrush) {
             this.canvas.freeDrawingBrush.color = color;
@@ -163,12 +174,11 @@ window.fabricEditor = {
         }
     },
 
-    // Przycinanie obrazu – tryb dwustopniowy:
-    // Pierwsze kliknięcie: dodanie edytowalnej ramki przycinania.
-    // Drugie kliknięcie: przycięcie obrazu, zastąpienie tła przyciętym obrazem oraz skalowanie do kontenera.
+    // Przycinanie obrazu – działanie dwustopniowe:
+    // 1. Po pierwszym kliknięciu dodaje edytowalny prostokąt.
+    // 2. Po kolejnym kliknięciu pobiera współrzędne, przycina obraz i ustawia nowe tło (skalowane do kontenera).
     cropImage: function () {
         if (!this.isCropping) {
-            // Aktywacja trybu przycinania – dodajemy edytowalny obiekt (ramkę)
             this.isCropping = true;
             const cropRect = new fabric.Rect({
                 left: 50,
@@ -188,14 +198,12 @@ window.fabricEditor = {
             alert("Dostosuj ramkę przycinania, a następnie kliknij ponownie 'Przytnij obraz'.");
             return "";
         } else {
-            // Drugi krok – wykonujemy przycięcie
             const cropRect = this.canvas.getObjects().find(obj => obj.name === "cropRect");
             if (!cropRect) {
                 this.isCropping = false;
                 alert("Nie znaleziono ramki przycinania.");
                 return "";
             }
-            // Usuwamy ramkę przycinania
             this.canvas.remove(cropRect);
             this.isCropping = false;
             const cropLeft = cropRect.left;
@@ -203,7 +211,7 @@ window.fabricEditor = {
             const cropWidth = cropRect.width * cropRect.scaleX;
             const cropHeight = cropRect.height * cropRect.scaleY;
 
-            // Pobieramy dane przyciętego obrazu
+            // Pobranie przyciętego obrazu jako dataURL
             const croppedDataUrl = this.canvas.toDataURL({
                 format: 'png',
                 left: cropLeft,
@@ -212,24 +220,22 @@ window.fabricEditor = {
                 height: cropHeight
             });
 
-            // Wczytujemy przycięty obraz jako nowe tło canvasu i skalujemy go do kontenera
+            // Ustawienie przyciętego obrazu jako nowe tło i skalowanie do kontenera
             fabric.Image.fromURL(croppedDataUrl, (img) => {
-                // Pobieramy kontener, w którym znajduje się canvas
                 const container = document.getElementById("canvasContainer");
+                let scaleFactor = 1;
                 if (container) {
                     const containerWidth = container.clientWidth;
-                    const scaleFactor = containerWidth / img.width;
-                    const newWidth = img.width * scaleFactor;
-                    const newHeight = img.height * scaleFactor;
-                    // Ustawiamy nowe wymiary canvasu
-                    this.canvas.setWidth(newWidth);
-                    this.canvas.setHeight(newHeight);
-                    // Skalujemy obraz
-                    img.scale(scaleFactor);
+                    scaleFactor = containerWidth / img.width;
                 }
+                const newWidth = img.width * scaleFactor;
+                const newHeight = img.height * scaleFactor;
+                this.canvas.setWidth(newWidth);
+                this.canvas.setHeight(newHeight);
+                img.scale(scaleFactor);
                 img.set({ selectable: false });
                 this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
-                // Usuwamy wszystkie inne obiekty z canvasu (jeśli istnieją)
+                // Usunięcie wszystkich dodatkowych obiektów
                 this.canvas.getObjects().forEach((obj) => {
                     if (obj !== this.canvas.backgroundImage) {
                         this.canvas.remove(obj);
@@ -241,7 +247,7 @@ window.fabricEditor = {
         }
     },
 
-    // Pobieranie obrazu z canvasu (całość wraz z obiektami)
+    // Pobieranie aktualnego obrazu z canvasu (wraz z wszystkimi zmianami)
     getEditedImage: function () {
         if (this.canvas) {
             return this.canvas.toDataURL({ format: 'png' });
@@ -249,7 +255,7 @@ window.fabricEditor = {
         return null;
     },
 
-    // Usuwanie wszystkich obiektów (pomijając tło)
+    // Usuwanie wszystkich obiektów z canvasu (pomijając tło)
     clearCanvas: function () {
         if (this.canvas) {
             this.canvas.getObjects().forEach((obj) => {

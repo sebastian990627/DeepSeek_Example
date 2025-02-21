@@ -4,15 +4,16 @@
 
 <h3>Zaawansowana edycja obrazu</h3>
 
-<!-- Kontener dla canvasu – dzięki niemu obraz będzie skalowany -->
+<!-- Kontener dla canvasu – dzięki niemu obraz będzie skalowany do rozmiaru kontenera -->
 <div id="canvasContainer" style="width: 100%; max-width: 800px; border: 1px solid #ccc; margin-bottom:10px;">
     <canvas id="imageCanvas" style="width: 100%;"></canvas>
 </div>
 
-<!-- Sterowanie przycinaniem -->
+<!-- Sterowanie przycinaniem oraz zapisywaniem -->
 <div style="margin-bottom: 10px;">
     <button @onclick="CropImage">Przytnij obraz</button>
     <button @onclick="ClearCanvas">Wyczyść zmiany</button>
+    <button @onclick="SaveImage">Zapisz obraz</button>
 </div>
 
 <!-- Dodawanie własnego tekstu -->
@@ -46,7 +47,7 @@
 
 @code {
     [Parameter]
-    public string ImagePath { get; set; } = """Zrzut ekranu 2025-02-05 203728.png""";
+    public string ImagePath { get; set; } = """Zrzut ekranu 2025-02-21 212810.png""";
 
     private string UserText { get; set; } = "Przykładowy tekst";
     private string LineColor { get; set; } = "#000000";
@@ -89,8 +90,6 @@
 
     private async Task CropImage()
     {
-        // Funkcja cropImage w JS działa dwustopniowo:
-        // Po pierwszym kliknięciu pojawia się edytowalny obiekt, po kolejnym – obraz jest przycinany i skalowany.
         var result = await JS.InvokeAsync<string>("fabricEditor.cropImage");
         if (result == "done")
         {
@@ -103,11 +102,27 @@
         await JS.InvokeVoidAsync("fabricEditor.clearCanvas");
     }
 
+    private async Task SaveImage()
+    {
+        var editedImage = await JS.InvokeAsync<string>("fabricEditor.getEditedImage");
+        if (!string.IsNullOrEmpty(editedImage))
+        {
+            Console.WriteLine($"Zapisany obraz: {editedImage.Length} bajtów.");
+            await SaveEditedImage(editedImage);
+        }
+    }
+
+    private async Task SaveEditedImage(string base64Image)
+    {
+        var imageBytes = Convert.FromBase64String(base64Image.Split(',')[1]);
+        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "edited.png");
+        await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Inicjalizacja canvasu z obrazem po pierwszym renderowaniu
             await JS.InvokeVoidAsync("fabricEditor.initialize", "imageCanvas", ImagePath);
         }
     }
