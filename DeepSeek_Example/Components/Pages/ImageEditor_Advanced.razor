@@ -1,5 +1,6 @@
 ﻿@page "/image-editor-advanced"
 @inject IJSRuntime JS
+@implements IDisposable
 @rendermode InteractiveServer
 
 <h3>Zaawansowana edycja obrazu</h3>
@@ -38,10 +39,16 @@
     <button @onclick="ZoomOut">-</button>
 </div>
 
-<!-- Tryb rysowania -->
+<!-- Tryb rysowania – pokazujemy właściwy przycisk w zależności od flagi -->
 <div style="margin-bottom: 10px;">
-    <button @onclick="EnableDrawing">Włącz rysowanie</button>
-    <button @onclick="DisableDrawing">Wyłącz rysowanie</button>
+    @if (IsDrawingModeEnabled)
+    {
+        <button @onclick="DisableDrawing">Wyłącz rysowanie</button>
+    }
+    else
+    {
+        <button @onclick="EnableDrawing">Włącz rysowanie</button>
+    }
 </div>
 
 <!-- Dodawanie kształtów -->
@@ -50,15 +57,25 @@
     <button @onclick="DrawCircle">Dodaj okrąg</button>
     <button @onclick="DrawLine">Dodaj linię</button>
     <button @onclick="DrawArrow">Dodaj strzałkę</button>
+    @if (IsObjectSelected)
+    {
+        <button @onclick="RemoveSelectedObject">Usuń zaznaczony obiekt</button>
+    }
 </div>
 
 @code {
     [Parameter]
-    public string ImagePath { get; set; } = "Zrzut ekranu 2025-02-05 203728.png"; // Upewnij się, że obraz znajduje się w wwwroot/images
+    public string ImagePath { get; set; } = "Zrzut ekranu 2025-02-05 203728.png"; // Upewnij się, że obraz jest w wwwroot/images
 
     private string UserText { get; set; } = "Przykładowy tekst";
     private string LineColor { get; set; } = "#000000";
     private int LineWidth { get; set; } = 3;
+
+    // Flagi statusu
+    private bool IsObjectSelected { get; set; } = false;
+    private bool IsDrawingModeEnabled { get; set; } = false;
+
+    private DotNetObjectReference<ImageEditor_Advanced>? _dotNetRef;
 
     private async Task AddCustomText()
     {
@@ -141,11 +158,32 @@
         await JS.InvokeVoidAsync("fabricEditor.zoomOut");
     }
 
+    private async Task RemoveSelectedObject()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.removeSelectedObject");
+    }
+
+    // Metoda wywoływana z JavaScript (JSInvokable) – aktualizuje flagi w C#
+    [JSInvokable]
+    public void UpdateStatus(bool isDrawingMode, bool isObjectSelected)
+    {
+        IsDrawingModeEnabled = isDrawingMode;
+        IsObjectSelected = isObjectSelected;
+        InvokeAsync(StateHasChanged);
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("fabricEditor.initialize", "imageCanvas", ImagePath);
+            // Utwórz referencję do komponentu i przekaż ją do JS
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("fabricEditor.initialize", "imageCanvas", ImagePath, _dotNetRef);
         }
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
     }
 }

@@ -68,33 +68,48 @@
 
 window.fabricEditor = {
     canvas: null,
+    dotNetRef: null,
     isCropping: false,
     currentShapeColor: "#000000",
     currentStrokeWidth: 2,
     currentZoom: 1,
 
     // Inicjalizacja fabric.js – obraz zostaje wczytany i skalowany do rozmiaru kontenera
-    initialize: function (canvasId, imagePath) {
+    initialize: function (canvasId, imagePath, dotNetRef) {
+        this.dotNetRef = dotNetRef;
         this.canvas = new fabric.Canvas(canvasId);
         this.canvas.isDrawingMode = false;
         this.canvas.backgroundColor = 'white';
 
         fabric.Image.fromURL(imagePath, (img) => {
-            // Pobieramy kontener i określamy maksymalną dostępną wysokość (80% wysokości widoku)
             const container = document.getElementById("canvasContainer");
             const containerWidth = container ? container.clientWidth : img.width;
             const maxContainerHeight = window.innerHeight * 0.8;
-            // Obliczamy skalę na podstawie szerokości oraz wysokości obrazu
             const scaleFactor = Math.min(containerWidth / img.width, maxContainerHeight / img.height);
             const newWidth = img.width * scaleFactor;
             const newHeight = img.height * scaleFactor;
-            // Ustawiamy nowe wymiary canvasu
             this.canvas.setWidth(newWidth);
             this.canvas.setHeight(newHeight);
-            // Skalujemy obraz i ustawiamy jako tło (obraz nie jest edytowalny)
             img.scale(scaleFactor);
             img.set({ selectable: false });
             this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
+        });
+
+        // Reagowanie na zdarzenia zaznaczenia – informujemy C# o statusie
+        this.canvas.on("selection:created", () => {
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, true);
+            }
+        });
+        this.canvas.on("selection:updated", () => {
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, true);
+            }
+        });
+        this.canvas.on("selection:cleared", () => {
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, false);
+            }
         });
     },
 
@@ -102,6 +117,9 @@ window.fabricEditor = {
     enableDrawingMode: function () {
         if (this.canvas) {
             this.canvas.isDrawingMode = true;
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject());
+            }
         }
     },
 
@@ -109,6 +127,9 @@ window.fabricEditor = {
     disableDrawingMode: function () {
         if (this.canvas) {
             this.canvas.isDrawingMode = false;
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject());
+            }
         }
     },
 
@@ -122,7 +143,7 @@ window.fabricEditor = {
         this.currentStrokeWidth = parseInt(width, 10);
     },
 
-    // Dodawanie własnego tekstu – teraz dodajemy tekst na środku widocznego obszaru canvasu
+    // Dodawanie własnego tekstu
     addCustomText: function (text) {
         if (this.canvas) {
             const centerX = this.canvas.getWidth() / 2;
@@ -139,7 +160,7 @@ window.fabricEditor = {
         }
     },
 
-    // Dodawanie prostokąta z ustawionym kolorem i grubością linii
+    // Dodawanie prostokąta
     drawRectangle: function () {
         if (this.canvas) {
             const rect = new fabric.Rect({
@@ -155,7 +176,7 @@ window.fabricEditor = {
         }
     },
 
-    // Dodawanie okręgu z ustawionym kolorem i grubością linii
+    // Dodawanie okręgu
     drawCircle: function () {
         if (this.canvas) {
             const circle = new fabric.Circle({
@@ -170,7 +191,7 @@ window.fabricEditor = {
         }
     },
 
-    // Dodawanie linii z ustawionym kolorem i grubością
+    // Dodawanie linii
     drawLine: function () {
         if (this.canvas) {
             const line = new fabric.Line([50, 50, 200, 200], {
@@ -181,10 +202,9 @@ window.fabricEditor = {
         }
     },
 
-    // Dodawanie strzałki – linia oraz trójkątny nagłówek; całość jako grupa
+    // Dodawanie strzałki
     drawArrow: function () {
         if (this.canvas) {
-            // Przykładowe współrzędne – można je modyfikować lub rozszerzyć o interakcję
             const x1 = 50, y1 = 50, x2 = 200, y2 = 200;
             const angle = Math.atan2(y2 - y1, x2 - x1);
             const headlen = 15;
@@ -193,14 +213,12 @@ window.fabricEditor = {
                 { x: x2 - headlen * Math.cos(angle - Math.PI / 6), y: y2 - headlen * Math.sin(angle - Math.PI / 6) },
                 { x: x2 - headlen * Math.cos(angle + Math.PI / 6), y: y2 - headlen * Math.sin(angle + Math.PI / 6) }
             ];
-            // Linia strzałki
             const line = new fabric.Line([x1, y1, x2, y2], {
                 stroke: this.currentShapeColor,
                 strokeWidth: this.currentStrokeWidth,
                 originX: 'center',
                 originY: 'center'
             });
-            // Nagłówek strzałki
             const arrowHead = new fabric.Polygon(arrowHeadPoints, {
                 fill: this.currentShapeColor,
                 stroke: this.currentShapeColor,
@@ -208,15 +226,12 @@ window.fabricEditor = {
                 originX: 'center',
                 originY: 'center'
             });
-            // Grupujemy linię i nagłówek
             const arrowGroup = new fabric.Group([line, arrowHead], { left: 50, top: 50 });
             this.canvas.add(arrowGroup);
         }
     },
 
-    // Przycinanie obrazu – działanie dwustopniowe:
-    // 1. Po pierwszym kliknięciu dodaje edytowalny prostokąt.
-    // 2. Po kolejnym kliknięciu pobiera współrzędne, przycina obraz i ustawia nowe tło (skalowane do kontenera).
+    // Przycinanie obrazu
     cropImage: function () {
         if (!this.isCropping) {
             this.isCropping = true;
@@ -251,7 +266,6 @@ window.fabricEditor = {
             const cropWidth = cropRect.width * cropRect.scaleX;
             const cropHeight = cropRect.height * cropRect.scaleY;
 
-            // Pobranie przyciętego obrazu jako dataURL
             const croppedDataUrl = this.canvas.toDataURL({
                 format: 'png',
                 left: cropLeft,
@@ -260,7 +274,6 @@ window.fabricEditor = {
                 height: cropHeight
             });
 
-            // Ustawienie przyciętego obrazu jako nowe tło i skalowanie do kontenera
             fabric.Image.fromURL(croppedDataUrl, (img) => {
                 const container = document.getElementById("canvasContainer");
                 const containerWidth = container ? container.clientWidth : img.width;
@@ -285,7 +298,7 @@ window.fabricEditor = {
         }
     },
 
-    // Pobranie aktualnego obrazu z canvasu (łącznie ze wszystkimi obiektami)
+    // Pobranie aktualnego obrazu z canvasu
     getEditedImage: function () {
         if (this.canvas) {
             return this.canvas.toDataURL({ format: 'png' });
@@ -305,6 +318,19 @@ window.fabricEditor = {
         }
     },
 
+    // Usuwanie zaznaczonego obiektu
+    removeSelectedObject: function () {
+        if (this.canvas) {
+            const activeObject = this.canvas.getActiveObject();
+            if (activeObject) {
+                this.canvas.remove(activeObject);
+                this.canvas.renderAll();
+            } else {
+                alert("Nie wybrano obiektu do usunięcia.");
+            }
+        }
+    },
+
     // Zoom in – powiększenie obrazu
     zoomIn: function () {
         if (this.canvas) {
@@ -321,3 +347,5 @@ window.fabricEditor = {
         }
     }
 };
+
+
