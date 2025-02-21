@@ -80,19 +80,18 @@ window.fabricEditor = {
         this.canvas.backgroundColor = 'white';
 
         fabric.Image.fromURL(imagePath, (img) => {
-            // Pobierz kontener dla canvasu
+            // Pobieramy kontener i określamy maksymalną dostępną wysokość (80% wysokości widoku)
             const container = document.getElementById("canvasContainer");
-            let scaleFactor = 1;
-            if (container) {
-                const containerWidth = container.clientWidth;
-                scaleFactor = containerWidth / img.width;
-            }
+            const containerWidth = container ? container.clientWidth : img.width;
+            const maxContainerHeight = window.innerHeight * 0.8;
+            // Obliczamy skalę na podstawie szerokości oraz wysokości obrazu
+            const scaleFactor = Math.min(containerWidth / img.width, maxContainerHeight / img.height);
             const newWidth = img.width * scaleFactor;
             const newHeight = img.height * scaleFactor;
-            // Ustaw nowe wymiary canvasu
+            // Ustawiamy nowe wymiary canvasu
             this.canvas.setWidth(newWidth);
             this.canvas.setHeight(newHeight);
-            // Skaluj obraz i ustaw jako tło (nieedytowalny)
+            // Skalujemy obraz i ustawiamy jako tło (obraz nie jest edytowalny)
             img.scale(scaleFactor);
             img.set({ selectable: false });
             this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
@@ -227,11 +226,9 @@ window.fabricEditor = {
             // Ustawienie przyciętego obrazu jako nowe tło i skalowanie do kontenera
             fabric.Image.fromURL(croppedDataUrl, (img) => {
                 const container = document.getElementById("canvasContainer");
-                let scaleFactor = 1;
-                if (container) {
-                    const containerWidth = container.clientWidth;
-                    scaleFactor = containerWidth / img.width;
-                }
+                const containerWidth = container ? container.clientWidth : img.width;
+                const maxContainerHeight = window.innerHeight * 0.8;
+                const scaleFactor = Math.min(containerWidth / img.width, maxContainerHeight / img.height);
                 const newWidth = img.width * scaleFactor;
                 const newHeight = img.height * scaleFactor;
                 this.canvas.setWidth(newWidth);
@@ -287,3 +284,4 @@ window.fabricEditor = {
         }
     }
 };
+
