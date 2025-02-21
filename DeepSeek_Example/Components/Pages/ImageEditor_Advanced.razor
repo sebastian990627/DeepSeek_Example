@@ -4,45 +4,44 @@
 
 <h3>Zaawansowana edycja obrazu</h3>
 
-<div>
-    <!-- Canvas – rozmiar zostanie ustawiony dynamicznie -->
-    <canvas id="imageCanvas" style="border:1px solid #ccc;"></canvas>
+<!-- Kontener dla canvasu – dzięki niemu obraz będzie skalowany -->
+<div id="canvasContainer" style="width: 100%; max-width: 800px; border: 1px solid #ccc; margin-bottom:10px;">
+    <canvas id="imageCanvas" style="width: 100%;"></canvas>
+</div>
+
+<!-- Sterowanie przycinaniem -->
+<div style="margin-bottom: 10px;">
+    <button @onclick="CropImage">Przytnij obraz</button>
+    <button @onclick="ClearCanvas">Wyczyść zmiany</button>
 </div>
 
 <!-- Dodawanie własnego tekstu -->
-<div style="margin-top: 10px;">
-    <label for="textInput">Tekst: </label>
-    <input id="textInput" type="text" @bind="UserText" />
+<div style="margin-bottom: 10px;">
+    <label for="textInput">Dodaj tekst: </label>
+    <input id="textInput" type="text" @bind="UserText" placeholder="Wprowadź tekst" />
     <button @onclick="AddCustomText">Dodaj tekst</button>
 </div>
 
 <!-- Ustawienia rysowania -->
-<div style="margin-top: 10px;">
+<div style="margin-bottom: 10px;">
     <label for="lineColor">Kolor linii: </label>
     <input id="lineColor" type="color" @bind="LineColor" />
     <label for="lineWidth">Grubość linii: </label>
-    <input id="lineWidth" type="number" min="1" max="20" @bind="LineWidth" />
+    <input id="lineWidth" type="number" min="1" max="20" @bind="LineWidth" style="width:60px;" />
     <button @onclick="SetDrawingOptions">Ustaw opcje rysowania</button>
 </div>
 
 <!-- Tryb rysowania -->
-<div style="margin-top: 10px;">
+<div style="margin-bottom: 10px;">
     <button @onclick="EnableDrawing">Włącz rysowanie</button>
     <button @onclick="DisableDrawing">Wyłącz rysowanie</button>
 </div>
 
 <!-- Dodawanie kształtów -->
-<div style="margin-top: 10px;">
+<div style="margin-bottom: 10px;">
     <button @onclick="DrawRectangle">Dodaj prostokąt</button>
     <button @onclick="DrawCircle">Dodaj okrąg</button>
     <button @onclick="DrawLine">Dodaj linię</button>
-</div>
-
-<!-- Przycinanie i zapis -->
-<div style="margin-top: 10px;">
-    <button @onclick="CropImage">Przytnij obraz</button>
-    <button @onclick="SaveImage">Zapisz obraz</button>
-    <button @onclick="ClearCanvas">Wyczyść zmiany</button>
 </div>
 
 @code {
@@ -90,23 +89,12 @@
 
     private async Task CropImage()
     {
-        // Mechanizm dwukrokowy – po pierwszym kliknięciu pojawia się prostokąt przycinania,
-        // a po drugim następuje przycięcie na podstawie ustawionego obszaru.
-        var croppedImage = await JS.InvokeAsync<string>("fabricEditor.cropImage");
-        if (!string.IsNullOrEmpty(croppedImage))
+        // Funkcja cropImage w JS działa dwustopniowo:
+        // Po pierwszym kliknięciu pojawia się edytowalny obiekt, po kolejnym – obraz jest przycinany i skalowany.
+        var result = await JS.InvokeAsync<string>("fabricEditor.cropImage");
+        if (result == "done")
         {
-            Console.WriteLine($"Przycięty obraz: {croppedImage.Length} bajtów.");
-            await SaveEditedImage(croppedImage);
-        }
-    }
-
-    private async Task SaveImage()
-    {
-        var editedImage = await JS.InvokeAsync<string>("fabricEditor.getEditedImage");
-        if (!string.IsNullOrEmpty(editedImage))
-        {
-            Console.WriteLine($"Zapisany obraz: {editedImage.Length} bajtów.");
-            await SaveEditedImage(editedImage);
+            Console.WriteLine("Obraz został przycięty i zaktualizowany.");
         }
     }
 
@@ -115,17 +103,11 @@
         await JS.InvokeVoidAsync("fabricEditor.clearCanvas");
     }
 
-    private async Task SaveEditedImage(string base64Image)
-    {
-        var imageBytes = Convert.FromBase64String(base64Image.Split(',')[1]);
-        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "edited.png");
-        await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            // Inicjalizacja canvasu z obrazem po pierwszym renderowaniu
             await JS.InvokeVoidAsync("fabricEditor.initialize", "imageCanvas", ImagePath);
         }
     }

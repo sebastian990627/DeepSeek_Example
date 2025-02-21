@@ -75,11 +75,10 @@ window.fabricEditor = {
     initialize: function (canvasId, imagePath) {
         this.canvas = new fabric.Canvas(canvasId);
         this.canvas.isDrawingMode = false;
-        // Opcjonalnie ustaw tło, jeśli chcesz inny kolor – domyślnie przez obraz
         this.canvas.backgroundColor = 'white';
 
+        // Ładowanie obrazu jako tła i ustawianie rozmiarów canvasu na rozmiary obrazu
         fabric.Image.fromURL(imagePath, (img) => {
-            // Ustawiamy canvas na oryginalny rozmiar obrazu
             this.canvas.setWidth(img.width);
             this.canvas.setHeight(img.height);
             img.set({ selectable: false });
@@ -87,20 +86,21 @@ window.fabricEditor = {
         });
     },
 
-    // Tryb rysowania
+    // Włączenie trybu rysowania
     enableDrawingMode: function () {
         if (this.canvas) {
             this.canvas.isDrawingMode = true;
         }
     },
 
+    // Wyłączenie trybu rysowania
     disableDrawingMode: function () {
         if (this.canvas) {
             this.canvas.isDrawingMode = false;
         }
     },
 
-    // Ustawienia pędzla do rysowania
+    // Ustawienia pędzla (kolor i grubość) dla trybu rysowania
     setDrawingOptions: function (color, width) {
         if (this.canvas && this.canvas.freeDrawingBrush) {
             this.canvas.freeDrawingBrush.color = color;
@@ -108,7 +108,7 @@ window.fabricEditor = {
         }
     },
 
-    // Dodawanie własnego tekstu – można dodać wiele obiektów
+    // Dodawanie własnego tekstu – można dodawać wiele obiektów
     addCustomText: function (text) {
         if (this.canvas) {
             const textObj = new fabric.Textbox(text, {
@@ -163,14 +163,16 @@ window.fabricEditor = {
         }
     },
 
-    // Przycinanie – działanie dwukrokowe z użyciem wbudowanych opcji
+    // Przycinanie obrazu – tryb dwustopniowy:
+    // Pierwsze kliknięcie: dodanie edytowalnej ramki przycinania.
+    // Drugie kliknięcie: przycięcie obrazu, zastąpienie tła przyciętym obrazem oraz skalowanie do kontenera.
     cropImage: function () {
         if (!this.isCropping) {
-            // Pierwszy krok: aktywujemy tryb przycinania – dodajemy edytowalny obiekt
+            // Aktywacja trybu przycinania – dodajemy edytowalny obiekt (ramkę)
             this.isCropping = true;
             const cropRect = new fabric.Rect({
-                left: 100,
-                top: 100,
+                left: 50,
+                top: 50,
                 width: 200,
                 height: 200,
                 fill: 'rgba(0,0,0,0.3)',
@@ -183,37 +185,63 @@ window.fabricEditor = {
             });
             this.canvas.add(cropRect);
             this.canvas.setActiveObject(cropRect);
-            alert("Dostosuj ramkę przycinania, a następnie kliknij 'Przytnij obraz' ponownie.");
-            return null;
+            alert("Dostosuj ramkę przycinania, a następnie kliknij ponownie 'Przytnij obraz'.");
+            return "";
         } else {
-            // Drugi krok: pobieramy wymiary ramki i wykonujemy przycięcie
+            // Drugi krok – wykonujemy przycięcie
             const cropRect = this.canvas.getObjects().find(obj => obj.name === "cropRect");
-            if (cropRect) {
-                this.canvas.remove(cropRect);
+            if (!cropRect) {
                 this.isCropping = false;
-                const cropLeft = cropRect.left;
-                const cropTop = cropRect.top;
-                const cropWidth = cropRect.width * cropRect.scaleX;
-                const cropHeight = cropRect.height * cropRect.scaleY;
-
-                // Używamy fabric do wygenerowania przyciętego obrazu
-                const croppedDataUrl = this.canvas.toDataURL({
-                    format: 'png',
-                    left: cropLeft,
-                    top: cropTop,
-                    width: cropWidth,
-                    height: cropHeight
-                });
-                return croppedDataUrl;
-            } else {
-                this.isCropping = false;
-                alert("Nie znaleziono obszaru przycinania.");
-                return null;
+                alert("Nie znaleziono ramki przycinania.");
+                return "";
             }
+            // Usuwamy ramkę przycinania
+            this.canvas.remove(cropRect);
+            this.isCropping = false;
+            const cropLeft = cropRect.left;
+            const cropTop = cropRect.top;
+            const cropWidth = cropRect.width * cropRect.scaleX;
+            const cropHeight = cropRect.height * cropRect.scaleY;
+
+            // Pobieramy dane przyciętego obrazu
+            const croppedDataUrl = this.canvas.toDataURL({
+                format: 'png',
+                left: cropLeft,
+                top: cropTop,
+                width: cropWidth,
+                height: cropHeight
+            });
+
+            // Wczytujemy przycięty obraz jako nowe tło canvasu i skalujemy go do kontenera
+            fabric.Image.fromURL(croppedDataUrl, (img) => {
+                // Pobieramy kontener, w którym znajduje się canvas
+                const container = document.getElementById("canvasContainer");
+                if (container) {
+                    const containerWidth = container.clientWidth;
+                    const scaleFactor = containerWidth / img.width;
+                    const newWidth = img.width * scaleFactor;
+                    const newHeight = img.height * scaleFactor;
+                    // Ustawiamy nowe wymiary canvasu
+                    this.canvas.setWidth(newWidth);
+                    this.canvas.setHeight(newHeight);
+                    // Skalujemy obraz
+                    img.scale(scaleFactor);
+                }
+                img.set({ selectable: false });
+                this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
+                // Usuwamy wszystkie inne obiekty z canvasu (jeśli istnieją)
+                this.canvas.getObjects().forEach((obj) => {
+                    if (obj !== this.canvas.backgroundImage) {
+                        this.canvas.remove(obj);
+                    }
+                });
+                this.canvas.renderAll();
+            });
+            return "done";
         }
     },
 
-    // Pobranie obrazu z canvasu (całość łącznie z obiektami)
+    // Pobieranie obrazu z canvasu (całość wraz z obiektami)
     getEditedImage: function () {
         if (this.canvas) {
             return this.canvas.toDataURL({ format: 'png' });
@@ -221,10 +249,9 @@ window.fabricEditor = {
         return null;
     },
 
-    // Czyszczenie obiektów (pomijając tło)
+    // Usuwanie wszystkich obiektów (pomijając tło)
     clearCanvas: function () {
         if (this.canvas) {
-            // Usuwamy wszystkie obiekty poza tłem
             this.canvas.getObjects().forEach((obj) => {
                 if (obj !== this.canvas.backgroundImage) {
                     this.canvas.remove(obj);
