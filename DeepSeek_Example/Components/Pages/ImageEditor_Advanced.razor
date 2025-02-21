@@ -1,0 +1,132 @@
+﻿@page "/image-editor-advanced"
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<h3>Zaawansowana edycja obrazu</h3>
+
+<div>
+    <!-- Canvas – rozmiar zostanie ustawiony dynamicznie -->
+    <canvas id="imageCanvas" style="border:1px solid #ccc;"></canvas>
+</div>
+
+<!-- Dodawanie własnego tekstu -->
+<div style="margin-top: 10px;">
+    <label for="textInput">Tekst: </label>
+    <input id="textInput" type="text" @bind="UserText" />
+    <button @onclick="AddCustomText">Dodaj tekst</button>
+</div>
+
+<!-- Ustawienia rysowania -->
+<div style="margin-top: 10px;">
+    <label for="lineColor">Kolor linii: </label>
+    <input id="lineColor" type="color" @bind="LineColor" />
+    <label for="lineWidth">Grubość linii: </label>
+    <input id="lineWidth" type="number" min="1" max="20" @bind="LineWidth" />
+    <button @onclick="SetDrawingOptions">Ustaw opcje rysowania</button>
+</div>
+
+<!-- Tryb rysowania -->
+<div style="margin-top: 10px;">
+    <button @onclick="EnableDrawing">Włącz rysowanie</button>
+    <button @onclick="DisableDrawing">Wyłącz rysowanie</button>
+</div>
+
+<!-- Dodawanie kształtów -->
+<div style="margin-top: 10px;">
+    <button @onclick="DrawRectangle">Dodaj prostokąt</button>
+    <button @onclick="DrawCircle">Dodaj okrąg</button>
+    <button @onclick="DrawLine">Dodaj linię</button>
+</div>
+
+<!-- Przycinanie i zapis -->
+<div style="margin-top: 10px;">
+    <button @onclick="CropImage">Przytnij obraz</button>
+    <button @onclick="SaveImage">Zapisz obraz</button>
+    <button @onclick="ClearCanvas">Wyczyść zmiany</button>
+</div>
+
+@code {
+    [Parameter]
+    public string ImagePath { get; set; } = """Zrzut ekranu 2025-02-05 203728.png""";
+
+    private string UserText { get; set; } = "Przykładowy tekst";
+    private string LineColor { get; set; } = "#000000";
+    private int LineWidth { get; set; } = 3;
+
+    private async Task AddCustomText()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.addCustomText", UserText);
+    }
+
+    private async Task SetDrawingOptions()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.setDrawingOptions", LineColor, LineWidth);
+    }
+
+    private async Task EnableDrawing()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.enableDrawingMode");
+    }
+
+    private async Task DisableDrawing()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.disableDrawingMode");
+    }
+
+    private async Task DrawRectangle()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.drawRectangle");
+    }
+
+    private async Task DrawCircle()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.drawCircle");
+    }
+
+    private async Task DrawLine()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.drawLine");
+    }
+
+    private async Task CropImage()
+    {
+        // Mechanizm dwukrokowy – po pierwszym kliknięciu pojawia się prostokąt przycinania,
+        // a po drugim następuje przycięcie na podstawie ustawionego obszaru.
+        var croppedImage = await JS.InvokeAsync<string>("fabricEditor.cropImage");
+        if (!string.IsNullOrEmpty(croppedImage))
+        {
+            Console.WriteLine($"Przycięty obraz: {croppedImage.Length} bajtów.");
+            await SaveEditedImage(croppedImage);
+        }
+    }
+
+    private async Task SaveImage()
+    {
+        var editedImage = await JS.InvokeAsync<string>("fabricEditor.getEditedImage");
+        if (!string.IsNullOrEmpty(editedImage))
+        {
+            Console.WriteLine($"Zapisany obraz: {editedImage.Length} bajtów.");
+            await SaveEditedImage(editedImage);
+        }
+    }
+
+    private async Task ClearCanvas()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.clearCanvas");
+    }
+
+    private async Task SaveEditedImage(string base64Image)
+    {
+        var imageBytes = Convert.FromBase64String(base64Image.Split(',')[1]);
+        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "edited.png");
+        await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("fabricEditor.initialize", "imageCanvas", ImagePath);
+        }
+    }
+}
