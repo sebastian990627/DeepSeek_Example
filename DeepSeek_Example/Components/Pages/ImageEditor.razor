@@ -1,0 +1,77 @@
+﻿@page "/image-editor"
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<h3>Edycja obrazu z rysowaniem i dodawaniem tekstu</h3>
+
+<div>
+    <!-- Element canvas do edycji obrazu -->
+    <canvas id="imageCanvas" width="800" height="600" style="border:1px solid #ccc;"></canvas>
+</div>
+
+<div style="margin-top: 10px;">
+    <button @onclick="EnableDrawing">Włącz rysowanie</button>
+    <button @onclick="DisableDrawing">Wyłącz rysowanie</button>
+    <button @onclick="AddText">Dodaj tekst</button>
+    <button @onclick="SaveImage">Zapisz obraz</button>
+    <button @onclick="ClearCanvas">Wyczyść zmiany</button>
+</div>
+
+@code {
+    // Ścieżka do obrazu – możesz ustawić ją przez parametr lub na stałe
+    [Parameter]
+    public string ImagePath { get; set; } = """Zrzut ekranu 2025-02-05 203728.png""";
+
+    private async Task EnableDrawing()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.enableDrawingMode");
+    }
+
+    private async Task DisableDrawing()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.disableDrawingMode");
+    }
+
+    private async Task AddText()
+    {
+        // Możesz rozbudować funkcję o pobranie tekstu od użytkownika
+        string text = "Przykładowy tekst";
+        await JS.InvokeVoidAsync("fabricEditor.addText", text);
+    }
+
+    private async Task SaveImage()
+    {
+        var editedImage = await JS.InvokeAsync<string>("fabricEditor.getEditedImage");
+        if (!string.IsNullOrEmpty(editedImage))
+        {
+            Console.WriteLine($"Zapisany obraz: {editedImage.Length} bajtów.");
+            await SaveEditedImage(editedImage);
+        }
+        else
+        {
+            Console.WriteLine("Błąd: Nie udało się uzyskać obrazu.");
+        }
+    }
+
+    private async Task ClearCanvas()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.clearCanvas");
+    }
+
+    // Przykładowa metoda zapisu obrazu – zapisuje plik w folderze wwwroot
+    private async Task SaveEditedImage(string base64Image)
+    {
+        var imageBytes = Convert.FromBase64String(base64Image.Split(',')[1]);
+        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "edited.png");
+        await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Inicjalizacja edytora fabric.js, przekazując id canvas oraz ścieżkę obrazu
+            await JS.InvokeVoidAsync("fabricEditor.initialize", "imageCanvas", ImagePath);
+        }
+    }
+}
