@@ -7,6 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10 MB
+});
+
+
 builder.Services.AddChatClient(new OllamaChatClient
     (new Uri("http://localhost:11434"),
     "deepseek-r1:8b"));

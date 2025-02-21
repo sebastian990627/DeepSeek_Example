@@ -1,0 +1,63 @@
+﻿@inject IJSRuntime JS
+@page "/image-cropper"
+@rendermode InteractiveServer
+
+<h3>Edycja obrazu</h3>
+
+@if (!string.IsNullOrEmpty(ImagePath))
+{
+    <div style="max-width: 100%; overflow: hidden;">
+        <img id="imageToCrop" src="@ImagePath" alt="Obraz do edycji" style="max-width: 100%;" />
+    </div>
+
+    <div style="margin-top: 10px;">
+        <button @onclick="CropImage">📐 Przytnij i Zapisz</button>
+        <button @onclick="ResetCropper">🔄 Resetuj</button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string ImagePath { get; set; } = """Zrzut ekranu 2025-02-05 203728.png""";
+
+    // Metoda do przycinania obrazu
+    private async Task CropImage()
+    {
+        var croppedImage = await JS.InvokeAsync<string>("cropper.getCroppedImage");
+        if (!string.IsNullOrEmpty(croppedImage))
+        {
+            Console.WriteLine($"Przycięty obraz: {croppedImage.Length} bajtów.");
+            await SaveCroppedImage(croppedImage);
+        }
+        else
+        {
+            Console.WriteLine("Błąd: Nie udało się uzyskać przyciętego obrazu.");
+        }
+    }
+
+    // Resetowanie obszaru przycinania
+    private async Task ResetCropper()
+    {
+        await JS.InvokeVoidAsync("cropper.resetCropper");
+    }
+
+    // Metoda zapisu obrazu (można podpiąć API lub zapisać lokalnie)
+    private async Task SaveCroppedImage(string base64Image)
+    {
+        var fileName = Path.GetFileName(ImagePath);
+        Console.WriteLine($"Obraz został przycięty i gotowy do zapisania: {fileName}");
+        var imageBytes = Convert.FromBase64String(base64Image.Split(',')[1]);
+        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "crop.png");
+        await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+    }
+
+    // Inicjalizacja Cropper.js po renderowaniu
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("Inicjalizacja Cropper.js...");
+            await JS.InvokeVoidAsync("cropper.initialize", "#imageToCrop");
+        }
+    }
+}
