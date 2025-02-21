@@ -4,8 +4,8 @@
 
 <h3>Zaawansowana edycja obrazu</h3>
 
-<!-- Kontener dla canvasu – dzięki niemu obraz będzie skalowany do rozmiaru kontenera -->
-<div id="canvasContainer" style="width: 100%; max-width: 800px; border: 1px solid #ccc; margin-bottom:10px;">
+<!-- Kontener dla canvasu – obraz będzie skalowany do rozmiaru kontenera -->
+<div id="canvasContainer" style="width: 100%; max-width: 800px; max-height:800px; border: 1px solid #ccc; margin-bottom:10px;">
     <canvas id="imageCanvas" style="width: 100%;"></canvas>
 </div>
 
@@ -23,13 +23,19 @@
     <button @onclick="AddCustomText">Dodaj tekst</button>
 </div>
 
-<!-- Ustawienia rysowania -->
+<!-- Ustawienia rysowania oraz kolor kształtów -->
 <div style="margin-bottom: 10px;">
-    <label for="lineColor">Kolor linii: </label>
+    <label for="lineColor">Kolor linii/kształtów: </label>
     <input id="lineColor" type="color" @bind="LineColor" />
     <label for="lineWidth">Grubość linii: </label>
     <input id="lineWidth" type="number" min="1" max="20" @bind="LineWidth" style="width:60px;" />
     <button @onclick="SetDrawingOptions">Ustaw opcje rysowania</button>
+</div>
+
+<!-- Przyciski skalowania obrazu -->
+<div style="margin-bottom: 10px;">
+    <button @onclick="ZoomIn">+</button>
+    <button @onclick="ZoomOut">-</button>
 </div>
 
 <!-- Tryb rysowania -->
@@ -47,7 +53,7 @@
 
 @code {
     [Parameter]
-    public string ImagePath { get; set; } = """Zrzut ekranu 2025-02-21 212810.png""";
+    public string ImagePath { get; set; } = "Zrzut ekranu 2025-02-21 212810.png"; // Upewnij się, że obraz znajduje się w wwwroot/images
 
     private string UserText { get; set; } = "Przykładowy tekst";
     private string LineColor { get; set; } = "#000000";
@@ -117,6 +123,16 @@
         var imageBytes = Convert.FromBase64String(base64Image.Split(',')[1]);
         var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "edited.png");
         await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+    }
+
+    private async Task ZoomIn()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.zoomIn");
+    }
+
+    private async Task ZoomOut()
+    {
+        await JS.InvokeVoidAsync("fabricEditor.zoomOut");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

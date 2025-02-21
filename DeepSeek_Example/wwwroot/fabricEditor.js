@@ -66,10 +66,12 @@
 //    }
 //};
 
-
 window.fabricEditor = {
     canvas: null,
     isCropping: false,
+    currentShapeColor: "#000000",
+    currentStrokeWidth: 2,
+    currentZoom: 1,
 
     // Inicjalizacja fabric.js – obraz zostaje wczytany i skalowany do rozmiaru kontenera
     initialize: function (canvasId, imagePath) {
@@ -97,7 +99,7 @@ window.fabricEditor = {
         });
     },
 
-    // Tryb rysowania – włącza możliwość rysowania pędzlem
+    // Włączenie trybu rysowania (free drawing)
     enableDrawingMode: function () {
         if (this.canvas) {
             this.canvas.isDrawingMode = true;
@@ -111,36 +113,38 @@ window.fabricEditor = {
         }
     },
 
-    // Ustawienia pędzla: kolor i grubość linii
+    // Ustawienia pędzla oraz kolor kształtów
     setDrawingOptions: function (color, width) {
         if (this.canvas && this.canvas.freeDrawingBrush) {
             this.canvas.freeDrawingBrush.color = color;
             this.canvas.freeDrawingBrush.width = parseInt(width, 10);
         }
+        this.currentShapeColor = color;
+        this.currentStrokeWidth = parseInt(width, 10);
     },
 
-    // Dodawanie własnego tekstu – można dodawać wiele obiektów
+    // Dodawanie własnego tekstu – tekst ma kolor wybrany w ustawieniach
     addCustomText: function (text) {
         if (this.canvas) {
             const textObj = new fabric.Textbox(text, {
                 left: 50,
                 top: 50,
-                fill: '#000',
+                fill: this.currentShapeColor,
                 fontSize: 20
             });
             this.canvas.add(textObj);
         }
     },
 
-    // Dodawanie prostokąta
+    // Dodawanie prostokąta z ustawionym kolorem i grubością linii
     drawRectangle: function () {
         if (this.canvas) {
             const rect = new fabric.Rect({
                 left: 150,
                 top: 150,
                 fill: 'transparent',
-                stroke: 'black',
-                strokeWidth: 2,
+                stroke: this.currentShapeColor,
+                strokeWidth: this.currentStrokeWidth,
                 width: 100,
                 height: 80
             });
@@ -148,7 +152,7 @@ window.fabricEditor = {
         }
     },
 
-    // Dodawanie okręgu
+    // Dodawanie okręgu z ustawionym kolorem i grubością linii
     drawCircle: function () {
         if (this.canvas) {
             const circle = new fabric.Circle({
@@ -156,19 +160,19 @@ window.fabricEditor = {
                 top: 200,
                 radius: 50,
                 fill: 'transparent',
-                stroke: 'black',
-                strokeWidth: 2
+                stroke: this.currentShapeColor,
+                strokeWidth: this.currentStrokeWidth
             });
             this.canvas.add(circle);
         }
     },
 
-    // Dodawanie linii
+    // Dodawanie linii z ustawionym kolorem i grubością
     drawLine: function () {
         if (this.canvas) {
             const line = new fabric.Line([50, 50, 200, 200], {
-                stroke: 'black',
-                strokeWidth: 2
+                stroke: this.currentShapeColor,
+                strokeWidth: this.currentStrokeWidth
             });
             this.canvas.add(line);
         }
@@ -247,7 +251,7 @@ window.fabricEditor = {
         }
     },
 
-    // Pobieranie aktualnego obrazu z canvasu (wraz z wszystkimi zmianami)
+    // Pobranie aktualnego obrazu z canvasu (łącznie ze wszystkimi obiektami)
     getEditedImage: function () {
         if (this.canvas) {
             return this.canvas.toDataURL({ format: 'png' });
@@ -264,6 +268,22 @@ window.fabricEditor = {
                 }
             });
             this.canvas.renderAll();
+        }
+    },
+
+    // Zoom in – powiększenie obrazu
+    zoomIn: function () {
+        if (this.canvas) {
+            this.currentZoom = (this.currentZoom || 1) * 1.1;
+            this.canvas.setZoom(this.currentZoom);
+        }
+    },
+
+    // Zoom out – zmniejszenie obrazu
+    zoomOut: function () {
+        if (this.canvas) {
+            this.currentZoom = (this.currentZoom || 1) / 1.1;
+            this.canvas.setZoom(this.currentZoom);
         }
     }
 };
