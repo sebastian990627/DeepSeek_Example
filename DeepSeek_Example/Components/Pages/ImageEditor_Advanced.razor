@@ -7,29 +7,29 @@
     <div class="card-header">
         <div class="btn-toolbar gap-2" role="toolbar">
             <div class="btn-group gap-1 btn-group-sm" role="group">
-                <button class="btn btn-secondary @(IsDrawingModeEnabled?"disabled":"")" @onclick="CropImage">Przytnij obraz</button>
-                <button class="btn btn-secondary" @onclick="ClearCanvas">Wyczyść</button>
-                <button class="btn btn-secondary" @onclick="SaveImage">Zapisz obraz</button>
+                <button class="btn btn-secondary @(IsDrawingModeEnabled ?"disabled" : "")" @onclick="CropImage">@(IsCroppingEnabled ? "Przytnij" : "Przycinanie")</button>
+                <button class="btn btn-secondary btn-sm" @onclick="ClearCanvas">Wyczyść</button>
+                <button class="btn btn-secondary btn-sm" @onclick="SaveImage">Zapisz obraz</button>
             </div>
 
             @if (IsObjectSelected)
             {
                 <button class="btn btn-danger btn-sm" @onclick="RemoveSelectedObject">Usuń zaznaczony</button>
             }
-            <button class="btn btn-secondary btn-sm @(IsDrawingModeEnabled?"disabled":"")" type="button" @onclick="AddCustomText">Dodaj tekst</button>
+            <button class="btn btn-secondary btn-sm @(IsDrawingModeEnabled || IsCroppingEnabled ? "disabled" : "")" type="button" @onclick="AddCustomText">Dodaj tekst</button>
 
             <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle btn-sm" type="button" id="propertiesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-secondary dropdown-toggle btn-sm @(IsCroppingEnabled?"disabled":"")" type="button" id="propertiesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     Właściwości
                 </button>
                 <div class="dropdown-menu p-3" aria-labelledby="propertiesDropdown">
                     <div class="mb-2">
                         <label for="lineColor" class="form-label">Kolor</label>
-                        <input type="color" class="form-control" id="lineColor" @bind="LineColor" />
+                        <input type="color" class="form-control" id="lineColor" @bind="LineColor" @oninput="SetDrawingOptions" />
                     </div>
                     <div>
                         <label for="lineWidth" class="form-label">Grubość</label>
-                        <input type="number" class="form-control" id="lineWidth" @bind="LineWidth" min="1" max="20" />
+                        <input type="number" class="form-control" id="lineWidth" @bind="LineWidth" min="1" max="20" @oninput="SetDrawingOptions" />
                     </div>
                     <div class="mt-2">
                         <button class="btn btn-secondary btn-sm" type="button" @onclick="SetDrawingOptions">Ustaw</button>
@@ -44,12 +44,12 @@
                 }
                 else
                 {
-                    <button class="btn btn-secondary" @onclick="EnableDrawing">Włącz rysowanie</button>
+                    <button class="btn btn-secondary @(IsCroppingEnabled?"disabled":"")" @onclick="EnableDrawing">Włącz rysowanie</button>
                 }
             </div>
 
             <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle btn-sm @(IsDrawingModeEnabled?"disabled":"")" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-secondary dropdown-toggle btn-sm @(IsDrawingModeEnabled || IsCroppingEnabled ? "disabled" : "")" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     Wstaw
                 </button>
                 <ul class="dropdown-menu">
@@ -88,6 +88,7 @@
     // Flagi statusu
     private bool IsObjectSelected { get; set; } = false;
     private bool IsDrawingModeEnabled { get; set; } = false;
+    private bool IsCroppingEnabled { get; set; } = false;
 
     private DotNetObjectReference<ImageEditor_Advanced>? _dotNetRef;
 
@@ -179,10 +180,11 @@
 
     // Metoda wywoływana z JavaScript (JSInvokable) – aktualizuje flagi w C#
     [JSInvokable]
-    public void UpdateStatus(bool isDrawingMode, bool isObjectSelected)
+    public void UpdateStatus(bool isDrawingMode, bool isObjectSelected, bool isCropping)
     {
         IsDrawingModeEnabled = isDrawingMode;
         IsObjectSelected = isObjectSelected;
+        IsCroppingEnabled = isCropping;
         InvokeAsync(StateHasChanged);
     }
 

@@ -98,17 +98,17 @@ window.fabricEditor = {
         // Reagowanie na zdarzenia zaznaczenia – informujemy C# o statusie
         this.canvas.on("selection:created", () => {
             if (this.dotNetRef) {
-                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, true);
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, true, this.isCropping);
             }
         });
         this.canvas.on("selection:updated", () => {
             if (this.dotNetRef) {
-                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, true);
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, true, this.isCropping);
             }
         });
         this.canvas.on("selection:cleared", () => {
             if (this.dotNetRef) {
-                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, false);
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, false, this.isCropping);
             }
         });
     },
@@ -118,7 +118,7 @@ window.fabricEditor = {
         if (this.canvas) {
             this.canvas.isDrawingMode = true;
             if (this.dotNetRef) {
-                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject());
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject(), this.isCropping);
             }
         }
     },
@@ -128,7 +128,7 @@ window.fabricEditor = {
         if (this.canvas) {
             this.canvas.isDrawingMode = false;
             if (this.dotNetRef) {
-                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject());
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject(), this.isCropping);
             }
         }
     },
@@ -231,7 +231,7 @@ window.fabricEditor = {
         }
     },
 
-    // Przycinanie obrazu
+    // Przycinanie obrazu – tryb przycinania
     cropImage: function () {
         if (!this.isCropping) {
             this.isCropping = true;
@@ -251,12 +251,18 @@ window.fabricEditor = {
             this.canvas.add(cropRect);
             this.canvas.setActiveObject(cropRect);
             alert("Dostosuj ramkę przycinania, a następnie kliknij ponownie 'Przytnij obraz'.");
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject(), this.isCropping);
+            }
             return "";
         } else {
             const cropRect = this.canvas.getObjects().find(obj => obj.name === "cropRect");
             if (!cropRect) {
                 this.isCropping = false;
                 alert("Nie znaleziono ramki przycinania.");
+                if (this.dotNetRef) {
+                    this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject(), this.isCropping);
+                }
                 return "";
             }
             this.canvas.remove(cropRect);
@@ -294,6 +300,9 @@ window.fabricEditor = {
                 });
                 this.canvas.renderAll();
             });
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject(), this.isCropping);
+            }
             return "done";
         }
     },
@@ -314,19 +323,44 @@ window.fabricEditor = {
                     this.canvas.remove(obj);
                 }
             });
+            this.isCropping = false;
             this.canvas.renderAll();
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject(), this.isCropping);
+            }
         }
     },
 
-    // Usuwanie zaznaczonego obiektu
+    // Usuwanie zaznaczonego obiektu – jeśli zaznaczono więcej niż jeden, operacja nie jest wykonywana
     removeSelectedObject: function () {
         if (this.canvas) {
             const activeObject = this.canvas.getActiveObject();
+
             if (activeObject) {
-                this.canvas.remove(activeObject);
-                this.canvas.renderAll();
+                if (activeObject.name === "cropRect") {
+                    this.isCropping = false;
+                }
+                if (activeObject.type === 'activeSelection') {
+                    if (activeObject.getObjects().length > 1) {
+                        alert("Nie można usunąć wielu obiektów jednocześnie.");
+                        return;
+                    } else {
+                        // Jeśli w selekcji jest tylko jeden obiekt, usuń go
+                        const obj = activeObject.getObjects()[0];
+                        this.canvas.remove(obj);
+                        this.canvas.discardActiveObject();
+                        this.canvas.renderAll();
+                    }
+                } else {
+                    // Usuwanie pojedynczego obiektu
+                    this.canvas.remove(activeObject);
+                    this.canvas.renderAll();
+                }
             } else {
                 alert("Nie wybrano obiektu do usunięcia.");
+            }
+            if (this.dotNetRef) {
+                this.dotNetRef.invokeMethodAsync("UpdateStatus", this.canvas.isDrawingMode, !!this.canvas.getActiveObject(), this.isCropping);
             }
         }
     },
@@ -347,5 +381,4 @@ window.fabricEditor = {
         }
     }
 };
-
 
