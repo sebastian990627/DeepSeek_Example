@@ -14,7 +14,7 @@
 
             @if (IsObjectSelected)
             {
-                <button class="btn btn-danger btn-sm" @onclick="RemoveSelectedObject">Usuń zaznaczony</button>
+                <button class="btn btn-danger btn-sm" @onclick="RemoveSelectedObject">Usuń zaznaczone</button>
             }
             <button class="btn btn-secondary btn-sm @(IsDrawingModeEnabled || IsCroppingEnabled ? "disabled" : "")" type="button" @onclick="AddCustomText">Dodaj tekst</button>
 

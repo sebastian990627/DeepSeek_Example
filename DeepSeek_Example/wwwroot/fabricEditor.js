@@ -133,7 +133,6 @@ window.fabricEditor = {
         }
     },
 
-    // Ustawienia pędzla oraz kolor kształtów
     setDrawingOptions: function (color, width) {
         if (this.canvas && this.canvas.freeDrawingBrush) {
             this.canvas.freeDrawingBrush.color = color;
@@ -141,6 +140,29 @@ window.fabricEditor = {
         }
         this.currentShapeColor = color;
         this.currentStrokeWidth = parseInt(width, 10);
+
+        // Jeśli istnieje zaznaczony obiekt, zmień jego kolor (dla pojedynczych obiektów oraz aktywnej selekcji)
+        var activeObj = this.canvas.getActiveObject();
+        if (activeObj) {
+            if (activeObj.type === 'activeSelection') {
+                // Dla grupy obiektów zmień kolor każdego obiektu
+                var objs = activeObj.getObjects();
+                objs.forEach(function (obj) {
+                    obj.set({ stroke: color });
+                    // Jeśli obiekt obsługuje fill (np. tekst) – opcjonalnie również zmień fill
+                    if (obj.type === 'textbox' || obj.type === 'text') {
+                        obj.set({ fill: color });
+                    }
+                });
+            } else {
+                // Pojedynczy obiekt
+                activeObj.set({ stroke: color });
+                if (activeObj.type === 'textbox' || activeObj.type === 'text') {
+                    activeObj.set({ fill: color });
+                }
+            }
+            this.canvas.renderAll();
+        }
     },
 
     // Dodawanie własnego tekstu
@@ -331,31 +353,25 @@ window.fabricEditor = {
         }
     },
 
-    // Usuwanie zaznaczonego obiektu – jeśli zaznaczono więcej niż jeden, operacja nie jest wykonywana
     removeSelectedObject: function () {
         if (this.canvas) {
             const activeObject = this.canvas.getActiveObject();
-
             if (activeObject) {
                 if (activeObject.name === "cropRect") {
                     this.isCropping = false;
                 }
                 if (activeObject.type === 'activeSelection') {
-                    if (activeObject.getObjects().length > 1) {
-                        alert("Nie można usunąć wielu obiektów jednocześnie.");
-                        return;
-                    } else {
-                        // Jeśli w selekcji jest tylko jeden obiekt, usuń go
-                        const obj = activeObject.getObjects()[0];
+                    // Usuwamy wszystkie obiekty znajdujące się w zaznaczeniu
+                    const objects = activeObject.getObjects();
+                    objects.forEach(obj => {
                         this.canvas.remove(obj);
-                        this.canvas.discardActiveObject();
-                        this.canvas.renderAll();
-                    }
+                    });
+                    this.canvas.discardActiveObject();
                 } else {
                     // Usuwanie pojedynczego obiektu
                     this.canvas.remove(activeObject);
-                    this.canvas.renderAll();
                 }
+                this.canvas.renderAll();
             } else {
                 alert("Nie wybrano obiektu do usunięcia.");
             }
@@ -365,20 +381,20 @@ window.fabricEditor = {
         }
     },
 
-    // Zoom in – powiększenie obrazu
-    zoomIn: function () {
-        if (this.canvas) {
-            this.currentZoom = (this.currentZoom || 1) * 1.1;
-            this.canvas.setZoom(this.currentZoom);
-        }
-    },
+    //// Zoom in – powiększenie obrazu
+    //zoomIn: function () {
+    //    if (this.canvas) {
+    //        this.currentZoom = (this.currentZoom || 1) * 1.1;
+    //        this.canvas.setZoom(this.currentZoom);
+    //    }
+    //},
 
-    // Zoom out – zmniejszenie obrazu
-    zoomOut: function () {
-        if (this.canvas) {
-            this.currentZoom = (this.currentZoom || 1) / 1.1;
-            this.canvas.setZoom(this.currentZoom);
-        }
-    }
+    //// Zoom out – zmniejszenie obrazu
+    //zoomOut: function () {
+    //    if (this.canvas) {
+    //        this.currentZoom = (this.currentZoom || 1) / 1.1;
+    //        this.canvas.setZoom(this.currentZoom);
+    //    }
+    //}
 };
 
