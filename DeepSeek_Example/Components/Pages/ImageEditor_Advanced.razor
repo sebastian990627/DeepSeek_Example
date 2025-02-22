@@ -3,7 +3,7 @@
 @implements IDisposable
 @rendermode InteractiveServer
 
-<div class="card">
+<div class="card" tabindex="-1" @onkeydown="OnKeyDown">
     <div class="card-header">
         <div class="btn-toolbar gap-2" role="toolbar">
             <div class="btn-group gap-1 btn-group-sm" role="group">
@@ -19,17 +19,17 @@
             <button class="btn btn-secondary btn-sm @(IsDrawingModeEnabled || IsCroppingEnabled ? "disabled" : "")" type="button" @onclick="AddCustomText">Dodaj tekst</button>
 
             <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle btn-sm @(IsCroppingEnabled?"disabled":"")" type="button" id="propertiesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-secondary dropdown-toggle btn-sm @(IsCroppingEnabled?"disabled":"")" type="button" id="propertiesDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="inside">
                     Właściwości
                 </button>
                 <div class="dropdown-menu p-3" aria-labelledby="propertiesDropdown">
                     <div class="mb-2">
                         <label for="lineColor" class="form-label">Kolor</label>
-                        <input type="color" class="form-control" id="lineColor" @bind="LineColor" @oninput="SetDrawingOptions" />
+                        <input type="color" class="form-control" id="lineColor" @bind="LineColor" />
                     </div>
                     <div>
                         <label for="lineWidth" class="form-label">Grubość</label>
-                        <input type="number" class="form-control" id="lineWidth" @bind="LineWidth" min="1" max="20" @oninput="SetDrawingOptions" />
+                        <input type="number" class="form-control" id="lineWidth" @bind="LineWidth" min="1" max="20" />
                     </div>
                     <div class="mt-2">
                         <button class="btn btn-secondary btn-sm" type="button" @onclick="SetDrawingOptions">Ustaw</button>
@@ -79,9 +79,9 @@
 
 @code {
     [Parameter]
-    public string ImagePath { get; set; } = "Zrzut ekranu 2025-02-05 203728.png"; // Upewnij się, że obraz jest w wwwroot/images
+    public string ImagePath { get; set; } = "Zrzut ekranu 2025-02-22 222719.png"; // Upewnij się, że obraz jest w wwwroot/images
 
-    private string UserText { get; set; } = "Przykładowy tekst";
+    private string UserText { get; set; } = "Naciśnij dwa razy";
     private string LineColor { get; set; } = "#000000";
     private int LineWidth { get; set; } = 3;
 
@@ -173,6 +173,13 @@
         await JS.InvokeVoidAsync("fabricEditor.zoomOut");
     }
 
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Delete" && IsObjectSelected)
+        {
+            await RemoveSelectedObject();
+        }
+    }
     private async Task RemoveSelectedObject()
     {
         await JS.InvokeVoidAsync("fabricEditor.removeSelectedObject");

@@ -128,3 +128,6 @@ chat-pulse-text {
         opacity: 0;
     }
 }
+.card:focus {
+    outline: none !important;
+}
