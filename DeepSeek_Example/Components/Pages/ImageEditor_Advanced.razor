@@ -19,7 +19,7 @@
             <button class="btn btn-secondary btn-sm @(IsDrawingModeEnabled || IsCroppingEnabled ? "disabled" : "")" type="button" @onclick="AddCustomText">Dodaj tekst</button>
 
             <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle btn-sm @(IsCroppingEnabled?"disabled":"")" type="button" id="propertiesDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="inside">
+                <button class="btn btn-secondary dropdown-toggle btn-sm @(IsCroppingEnabled?"disabled":"")" type="button" id="propertiesDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="false">
                     Właściwości
                 </button>
                 <div class="dropdown-menu p-3" aria-labelledby="propertiesDropdown">
@@ -32,7 +32,7 @@
                         <input type="number" class="form-control" id="lineWidth" @bind="LineWidth" min="1" max="20" />
                     </div>
                     <div class="mt-2">
-                        <button class="btn btn-secondary btn-sm" type="button" @onclick="SetDrawingOptions">Ustaw</button>
+                        <button class="btn btn-secondary btn-sm" id="btnFilterSubmit" type="button" data-bs-toggle="dropdown" aria-expanded="false" @onclick="SetDrawingOptions">Ustaw</button>
                     </div>
                 </div>
             </div>
